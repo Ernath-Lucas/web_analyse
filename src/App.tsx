@@ -1,16 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { Activity, Globe } from 'lucide-react';
+import { Activity, Globe, History, MapPin, Plus } from 'lucide-react';
 import { SiteCard } from './components/SiteCard';
 import { StatsOverview } from './components/StatsOverview';
 import { UrlManager } from './components/UrlManager';
+import { BusinessDiscovery } from './components/BusinessDiscovery';
+import { HistoryTab } from './components/HistoryTab';
 import { SiteAnalysis, AnalysisStats } from './types';
 import { analyzeSite } from './utils/pageSpeedApi';
+import { HistoryManager } from './utils/historyManager';
 
 function App() {
   const [analyses, setAnalyses] = useState<SiteAnalysis[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [currentUrls, setCurrentUrls] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'discovery' | 'manual' | 'history'>('discovery');
 
   const initializeAnalyses = useCallback((urls: string[]) => {
     return urls.map(url => ({
@@ -78,6 +82,17 @@ function App() {
               }
             : a
         ));
+        
+        // Ajouter à l'historique si l'analyse est réussie
+        if (!result.error) {
+          HistoryManager.addToHistory({
+            url: analysis.url,
+            score: result.score,
+            error: result.error,
+            loading: false,
+            completed: true
+          });
+        }
       } catch (error) {
         // Gérer les erreurs
         setAnalyses(prev => prev.map(a => 
@@ -111,7 +126,7 @@ function App() {
               <Activity className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900">
-              Analyseur de débrit web !
+              PageSpeed Dashboard
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -119,11 +134,62 @@ function App() {
           </p>
         </div>
 
-        {/* API Key Form */}
+        {/* Navigation Tabs */}
         {!hasStarted && (
+          <div className="flex justify-center mb-8">
+            <div className="bg-white rounded-xl shadow-md p-2 border border-gray-100">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('discovery')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                    activeTab === 'discovery'
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span>Découverte auto</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('manual')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                    activeTab === 'manual'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Ajout manuel</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+                    activeTab === 'history'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <History className="h-4 w-4" />
+                  <span>Historique</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content */}
+        {!hasStarted && activeTab === 'discovery' && (
+          <BusinessDiscovery onStartAnalysis={runAnalysis} />
+        )}
+        
+        {!hasStarted && activeTab === 'manual' && (
           <div className="max-w-2xl mx-auto">
             <UrlManager onStartAnalysis={runAnalysis} />
           </div>
+        )}
+        
+        {!hasStarted && activeTab === 'history' && (
+          <HistoryTab />
         )}
 
         {/* Stats Overview */}
@@ -157,6 +223,7 @@ function App() {
                 setHasStarted(false);
                 setAnalyses([]);
                 setCurrentUrls([]);
+                setActiveTab('discovery');
               }}
               className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
