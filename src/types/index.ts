@@ -23,6 +23,9 @@ export interface Business {
   website?: string;
   location: string;
   distance: number;
+  placeId: string;
+  rating?: number;
+  types: string[];
 }
 
 export interface HistoryEntry extends SiteAnalysis {
